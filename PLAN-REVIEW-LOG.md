@@ -87,3 +87,22 @@ Most Round 1 findings are substantively addressed, and I accept the stated owner
 VERDICT: REVISE
 ### Claude's response (Rev 3)
 **Accepted (all 10, one modified):** #1 `_t` → `app/t/[tenant]` (underscore folders are private in App Router — good catch) + middleware blocks direct `/t/` access; #2 middleware matcher excludes `_next`/api/static/metadata; #3 single global catalog built inside one cached+tagged operation, tenant filtering outside the cache; #4 revalidate invalidates global `catalog` tag + BOTH tenants' route trees; #5 stable slug from repo name (owner-disambiguated), never from title; #6 liveUrl origins matching either showcase domain rejected (same-origin sandbox escape); #7 zod `.strict()` rejects unknown fields — **modified:** `embeddable` defaults to `true` when liveUrl present, not `false` — embedding is the product's core experience and publishers are the owners themselves; safety comes from the cross-origin requirement (#6) + sandbox, not from defaulting the main feature off; #8 visible grid-view toggle instead of focusable-but-hidden list; #9 production-build integration test asserting cross-host isolation on `/`, `/blog`, RSS; #10 preview hosts emit noindex + production canonicals, gated on `VERCEL_ENV`.
+
+## Round 3 — Codex
+Rev 3 addresses the substance of most Round 2 findings. The `embeddable: true` default is reasonable under the stated trust model, but several concrete issues remain.
+
+1. **The plan contradicts itself on routing:** Approach uses `/t/[tenant]`, but Key Decisions still specifies `/_t/[tenant]`, which Next.js will treat as private. Fix: replace every remaining `/_t` reference with `/t`.
+
+2. **The slug scheme is not actually stable:** adding a later cross-owner collision can rename an existing `repo` route to `owner--repo`, while kebab-casing can collapse distinct names such as `foo.bar` and `foo-bar`. Fix: always derive the slug from owner plus the losslessly encoded GitHub repository name.
+
+3. **Cross-origin validation does not fully prevent sandbox escape:** an embedded app can redirect or self-navigate its iframe to a showcase origin, after which `allow-scripts allow-same-origin` becomes dangerous. Fix: send `Content-Security-Policy: frame-ancestors 'none'` on showcase pages, or remove `allow-same-origin`/host embeds on a separate isolated origin.
+
+4. **Partial-failure behavior conflicts with stale-on-error:** `Promise.allSettled` can turn transient GitHub failures into a successful but incomplete catalog, causing apps to disappear and replacing the last good value. Fix: exclude deterministic manifest failures, but abort the entire refresh and preserve stale data on rate limits, timeouts, 5xx responses, or account-listing failures.
+
+5. **Production Vercel aliases evade the preview SEO rule:** `project.vercel.app` can belong to `VERCEL_ENV=production`, so environment-only gating may serve indexable duplicate Scott content from the production cache. Fix: redirect production `*.vercel.app` requests to the canonical custom domain; reserve `noindex` rendering for actual preview deployments.
+
+6. **Excluding `/sitemap.xml` from tenant rewrites conflicts with tenant-specific canonical URLs:** a shared sitemap route cannot safely emit the correct host-specific URLs. Fix: rewrite sitemap requests by tenant too, or provide explicit per-domain sitemap handling outside the page matcher.
+
+VERDICT: REVISE
+### Claude's response (Rev 4)
+**Accepted (all 6):** #1 stray `/_t` reference fixed → `/t` everywhere; #2 slug is always `<account>--<repo>` verbatim-lowercased (no kebab collapsing, no collision-dependent renames); #3 showcase pages send `frame-ancestors 'none'` — closes the iframe-self-navigation escape; #4 transient GitHub failures (rate limit/timeout/5xx/listing failure) abort the refresh and preserve the stale catalog, only deterministic manifest rejections exclude a repo; #5 production `*.vercel.app` 301s to the canonical domain, true previews render noindex+canonical; #6 robots/sitemap/RSS are tenant-rewritten (host-specific), only true static assets excluded from the matcher.

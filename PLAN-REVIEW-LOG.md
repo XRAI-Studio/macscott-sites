@@ -122,3 +122,12 @@ No new material design problems remain. During implementation, use Next.js 16’
 VERDICT: APPROVED
 ### Resolution
 APPROVED in Round 4 of 5. Codex's implementation notes (Next.js 16 proxy.ts convention, revalidateTag profiles) carried forward as build guidance.
+
+## Act 3 — Build
+
+### Round 1 — Codex build
+Codex Sol (gpt-5.6-sol, thread 019f71eb-4c26-74d1-8d35-2c06496abd88) implemented the full spec in one session: ~55 files — Next.js 16 App Router + TS + Tailwind, proxy.ts tenant routing, strict-zod manifest pipeline, tagged global catalog with stale-on-transient-failure, R3F orb nebula (lazy, tiered, context-loss handled), zero-JS static landing pages, git-markdown blog + RSS/robots/sitemap per tenant, revalidate/catalog-status APIs, vitest suite + cross-host integration test + landing-bundle checker, README, seeded content. Reported deviations: (1) landing rebuilt as a zero-JS static route handler because Next 16's framework runtime alone exceeded the 110KB budget — landing now ships 0.0KB JS; (2) browser Back restores state but doesn't replay a reverse camera animation; (3) no automated visual/screenshot pass available in this environment.
+(Note: a first launch attempt died instantly — Claude's `grep -m1` closed codex's stdout pipe, causing a Rust panic on Windows; zero files written; relaunched with stream-to-file. Logged as harness lesson, not a Codex failure.)
+
+### Claude's verdict
+Verified independently, not from Codex's pasted output: `npm test` → 28 passed/3 skipped ✓; `npm run test:integration` (real build+start, Host-header isolation asserted) → 3 passed ✓; `npm run build` → clean, expected route tree ✓; `scripts/check-landing-bundle.mjs` → landing 0.0KB gzip, no three.js signature outside the lazy nebula chunk (325KB, /apps only) ✓. Diff review of the risk core (proxy.ts, lib/manifest.ts, lib/tenant.ts, lib/catalog.ts, lib/catalog-builder.ts, api/revalidate, app-detail-overlay, landing route.ts): all Act 2 decisions present and correctly implemented — owner anti-spoof, showcase-origin rejection, .strict() schema, SHA-pinned fetches, transient-abort/stale-serve, header bearer auth, iframe sandbox + permissions, host allowlist + alias redirects + preview noindex, HTML-escaped static landing. Deviations accepted: (1) beats the budget's intent outright; (2) cosmetic; (3) covered by HTTP-level integration tests. Minor nits noted, non-blocking: `accent` is required rather than optional (stricter than plan example; documented), deep-linked overlay's BACK uses router.back(). PASS — no fix rounds needed (0 of 2 used).

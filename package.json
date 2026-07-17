@@ -1,0 +1,44 @@
+{
+  "name": "macscott-apps-showcase",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "cross-env RUN_INTEGRATION=1 vitest run tests/cross-host.integration.test.ts --testTimeout=120000",
+    "check:bundle": "node scripts/check-landing-bundle.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.6.1",
+    "@react-three/postprocessing": "3.0.4",
+    "detect-gpu": "5.0.70",
+    "gray-matter": "^4.0.3",
+    "next": "16.2.10",
+    "p-limit": "^7.2.0",
+    "postprocessing": "^6.38.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "three": "^0.180.0",
+    "unified": "^11.0.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.10",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.180.0",
+    "cross-env": "^10.1.0",
+    "tailwindcss": "4.1.10",
+    "typescript": "^5.9.0",
+    "vitest": "4.1.0"
+  }
+}

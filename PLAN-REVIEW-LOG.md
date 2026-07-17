@@ -106,3 +106,19 @@ Rev 3 addresses the substance of most Round 2 findings. The `embeddable: true` d
 VERDICT: REVISE
 ### Claude's response (Rev 4)
 **Accepted (all 6):** #1 stray `/_t` reference fixed → `/t` everywhere; #2 slug is always `<account>--<repo>` verbatim-lowercased (no kebab collapsing, no collision-dependent renames); #3 showcase pages send `frame-ancestors 'none'` — closes the iframe-self-navigation escape; #4 transient GitHub failures (rate limit/timeout/5xx/listing failure) abort the refresh and preserve the stale catalog, only deterministic manifest rejections exclude a repo; #5 production `*.vercel.app` 301s to the canonical domain, true previews render noindex+canonical; #6 robots/sitemap/RSS are tenant-rewritten (host-specific), only true static assets excluded from the matcher.
+
+## Round 4 — Codex
+All six Round 3 findings are genuinely addressed:
+
+- `/t/[tenant]` is consistent throughout.
+- Slugs are deterministic and collision-safe.
+- `frame-ancestors 'none'` closes the iframe self-navigation escape.
+- Transient GitHub failures preserve the complete last-good catalog.
+- Production Vercel aliases redirect; previews are `noindex`.
+- Robots, sitemap, and RSS are tenant-rewritten.
+
+No new material design problems remain. During implementation, use Next.js 16’s current `proxy.ts` convention and `revalidateTag('catalog', 'max')` stale-while-revalidate semantics; these are implementation-version details rather than plan blockers. [Next.js Proxy documentation](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [revalidateTag documentation](https://nextjs.org/docs/app/api-reference/functions/revalidateTag).
+
+VERDICT: APPROVED
+### Resolution
+APPROVED in Round 4 of 5. Codex's implementation notes (Next.js 16 proxy.ts convention, revalidateTag profiles) carried forward as build guidance.

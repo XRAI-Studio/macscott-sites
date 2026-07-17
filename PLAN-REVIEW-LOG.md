@@ -60,3 +60,30 @@ VERDICT: REVISE
 
 **Rejected with reason:**
 - **#14 PR + CODEOWNERS + branch protection for agent commits** → overkill for a two-person personal repo where the "agents" are the owners' own tools; mitigation adopted instead: fine-grained PATs scoped to this single repo, contents:write. Logged as explicit out-of-scope.
+
+## Round 2 — Codex
+Most Round 1 findings are substantively addressed, and I accept the stated owner-controlled publishing model. However, several implementation blockers remain.
+
+1. **`app/_t/[tenant]` will not create routes:** Next.js treats underscore-prefixed App Router folders as private implementation folders. Fix: use a routable internal prefix such as `app/__tenant` only if verified—or safely `app/t/[tenant]`—and block direct public access in middleware.
+
+2. **Middleware scope is unspecified:** rewriting framework assets, images, API endpoints, or metadata files under the tenant prefix will break them. Fix: define a matcher excluding `_next`, `/api`, static files, icons, and other non-page requests.
+
+3. **Route rewriting does not automatically isolate the Next data cache:** identical GitHub `fetch` calls can share cached responses regardless of the tenant-prefixed page URL. Fix: explicitly include tenant in cache keys/tags, or cache one global catalog and filter it outside the cached operation.
+
+4. **Revalidation scope remains ambiguous:** a shared app or ownership change may require invalidating both tenants, detail routes, and catalog-derived metadata. Fix: invalidate a global catalog tag plus both tenant route trees, rather than only the requesting tenant’s `/apps` page.
+
+5. **App route identity is undefined:** title-derived slugs can collide, and changing a title would break existing deep links. Fix: derive a stable unique slug from repository owner/name or add a validated manifest slug with catalog-wide uniqueness checks.
+
+6. **The iframe sandbox is unsafe for same-origin URLs:** `allow-scripts` plus `allow-same-origin` can let same-origin embedded content escape sandbox restrictions. Fix: reject `liveUrl` origins matching either showcase domain and explicitly require cross-origin app hosting.
+
+7. **“Strict zod” conflicts with silently ignored unknown fields:** typos such as `embedable` can disappear without a useful rejection, while the default for omitted `embeddable` is undefined. Fix: reject unknown fields and default `embeddable` to `false`.
+
+8. **The accessibility fallback is focusable but visually hidden:** keyboard users can tab into controls they cannot see. Fix: keep a visible catalog/list toggle or reveal each semantic control with an obvious focus state.
+
+9. **The highest-risk cache boundary still lacks an automated test:** tenant resolver unit tests cannot detect cross-host HTML, RSC, RSS, or data-cache leakage. Fix: add one production-build integration test issuing Scott and Alexander host headers and asserting distinct responses and cached content.
+
+10. **Preview-host behavior needs an explicit SEO policy:** wildcard `*.vercel.app` hosts can expose duplicate Scott content. Fix: emit `noindex` and canonical production URLs on preview hosts, and distinguish preview from production using `VERCEL_ENV`.
+
+VERDICT: REVISE
+### Claude's response (Rev 3)
+**Accepted (all 10, one modified):** #1 `_t` → `app/t/[tenant]` (underscore folders are private in App Router — good catch) + middleware blocks direct `/t/` access; #2 middleware matcher excludes `_next`/api/static/metadata; #3 single global catalog built inside one cached+tagged operation, tenant filtering outside the cache; #4 revalidate invalidates global `catalog` tag + BOTH tenants' route trees; #5 stable slug from repo name (owner-disambiguated), never from title; #6 liveUrl origins matching either showcase domain rejected (same-origin sandbox escape); #7 zod `.strict()` rejects unknown fields — **modified:** `embeddable` defaults to `true` when liveUrl present, not `false` — embedding is the product's core experience and publishers are the owners themselves; safety comes from the cross-origin requirement (#6) + sandbox, not from defaulting the main feature off; #8 visible grid-view toggle instead of focusable-but-hidden list; #9 production-build integration test asserting cross-host isolation on `/`, `/blog`, RSS; #10 preview hosts emit noindex + production canonicals, gated on `VERCEL_ENV`.

@@ -23,7 +23,7 @@ function PreviewPlane({ url }: { url: string }) {
 // OrbitControls never damps its dolly, so wheel zoom snaps. We disable its zoom
 // and drive camera distance ourselves with an exponentially damped target.
 function SmoothZoom({ min, max, diveLock }: { min: number; max: number; diveLock: { current: boolean } }) {
-  const target = useRef(8);
+  const target = useRef(11);
   const gl = useThree((state) => state.gl);
   useEffect(() => {
     const element = gl.domElement;
@@ -101,7 +101,7 @@ export default function OrbNebula({ apps, tier, reducedMotion, onContextLost }: 
   const accent = apps[0]?.accent ?? "#ff8a00";
   const diveLock = useRef(false);
   return (
-    <Canvas dpr={tier === "full" ? [1, 1.75] : 1} camera={{ position: [0, 0, 8], fov: 55 }} gl={{ antialias: tier === "full", powerPreference: tier === "full" ? "high-performance" : "low-power" }} onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", (event) => { event.preventDefault(); onContextLost(); }, { once: true })}>
+    <Canvas dpr={tier === "full" ? [1, 1.75] : 1} camera={{ position: [0, 0, 11], fov: 55 }} gl={{ antialias: tier === "full", powerPreference: tier === "full" ? "high-performance" : "low-power" }} onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", (event) => { event.preventDefault(); onContextLost(); }, { once: true })}>
       <color attach="background" args={["#030306"]} />
       <fog attach="fog" args={["#030306", 12, 42]} />
       <ambientLight intensity={.45} />

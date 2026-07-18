@@ -23,7 +23,7 @@ function PreviewPlane({ url }: { url: string }) {
 // OrbitControls never damps its dolly, so wheel zoom snaps. We disable its zoom
 // and drive camera distance ourselves with an exponentially damped target.
 function SmoothZoom({ min, max, diveLock }: { min: number; max: number; diveLock: { current: boolean } }) {
-  const target = useRef(11);
+  const target = useRef(9.5);
   const gl = useThree((state) => state.gl);
   useEffect(() => {
     const element = gl.domElement;
@@ -51,7 +51,9 @@ function Orb({ app, index, tier, reducedMotion, diveLock }: { app: CatalogApp; i
   const router = useRouter();
   const angle = index * 2.399;
   const radius = 2.5 + (index % 4) * 1.45;
-  const position = useMemo<[number, number, number]>(() => [Math.cos(angle) * radius, ((index % 3) - 1) * 1.6, -Math.sin(angle) * radius - index * .35], [angle, index, radius]);
+  // abs() keeps every orb on or behind the z=0 plane so none spawns right in
+  // front of the camera and fills the viewport with its preview card.
+  const position = useMemo<[number, number, number]>(() => [Math.cos(angle) * radius, ((index % 3) - 1) * 1.6, -Math.abs(Math.sin(angle)) * radius - index * .35], [angle, index, radius]);
   useFrame((state, delta) => {
     if (!group.current || reducedMotion) return;
     if (diving.current) {
@@ -101,7 +103,7 @@ export default function OrbNebula({ apps, tier, reducedMotion, onContextLost }: 
   const accent = apps[0]?.accent ?? "#ff8a00";
   const diveLock = useRef(false);
   return (
-    <Canvas dpr={tier === "full" ? [1, 1.75] : 1} camera={{ position: [0, 0, 11], fov: 55 }} gl={{ antialias: tier === "full", powerPreference: tier === "full" ? "high-performance" : "low-power" }} onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", (event) => { event.preventDefault(); onContextLost(); }, { once: true })}>
+    <Canvas dpr={tier === "full" ? [1, 1.75] : 1} camera={{ position: [0, 0, 9.5], fov: 55 }} gl={{ antialias: tier === "full", powerPreference: tier === "full" ? "high-performance" : "low-power" }} onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", (event) => { event.preventDefault(); onContextLost(); }, { once: true })}>
       <color attach="background" args={["#030306"]} />
       <fog attach="fog" args={["#030306", 12, 42]} />
       <ambientLight intensity={.45} />

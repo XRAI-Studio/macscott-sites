@@ -98,6 +98,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .detail-card { position: absolute; z-index: 2; right: 1.5rem; bottom: 1.5rem; max-width: 390px; padding: 1.5rem; border: 1px solid #ffffff20; border-radius: 1rem; background: #07070be8; backdrop-filter: blur(18px); }
 .detail-card h1 { margin: .6rem 0; font-size: 2rem; }
 .detail-card > p:not(.eyebrow) { color: #aeb3bf; line-height: 1.6; }
+.detail-card-minimize { position: absolute; top: .75rem; right: .75rem; display: grid; place-items: center; width: 1.75rem; height: 1.75rem; padding: 0; border: 1px solid #ffffff20; border-radius: .5rem; background: #ffffff0d; color: white; font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.detail-card-minimize:hover { background: #ffffff1f; }
+.detail-card-restore { position: absolute; z-index: 2; right: 1.5rem; bottom: 1.5rem; display: flex; align-items: center; gap: .6rem; max-width: 390px; padding: .6rem .85rem; border: 1px solid #ffffff20; border-radius: .75rem; background: #07070be8; backdrop-filter: blur(18px); color: white; cursor: pointer; font: inherit; }
+.detail-card-restore:hover { background: #0d0d14ee; }
+.detail-card-restore .eyebrow { margin: 0; }
+.detail-card-restore-title { max-width: 14rem; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.detail-card-restore span:last-child { margin-left: auto; color: #aeb3bf; }
 .dormant { display: grid; place-items: center; background: radial-gradient(circle, rgb(var(--tenant-glow) / .12), transparent 45%); }
 .dormant-orb { display: grid; width: min(48vw, 28rem); aspect-ratio: 1; place-items: center; border: 1px solid var(--app-accent); border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--app-accent), #080812 65%); box-shadow: inset -2rem -2rem 6rem #000, 0 0 8rem color-mix(in srgb, var(--app-accent) 35%, transparent); }
 .dormant-orb span { font-size: .7rem; font-weight: 900; letter-spacing: .25em; }

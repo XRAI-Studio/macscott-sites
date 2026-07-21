@@ -25,7 +25,7 @@ export class LightningSegments {
     const pattern = [0, -1, 0, 1, 1, -1, 1, -1, 0, 1, 1, 1];
     for (let orb = 0; orb < 24; orb += 1) for (let branch = 0; branch < 6; branch += 1) for (let segment = 0; segment < 8; segment += 1) {
       const slot = (orb * 48 + branch * 8 + segment), base = slot * VERTICES_PER_SEGMENT;
-      const angle = branch * Math.PI / 3 + noise(orb * 73 + branch) * .65, startRadius = .82 + segment * .19, endRadius = startRadius + .22;
+      const angle = branch * Math.PI / 3 + noise(orb * 73 + branch) * .65, startRadius = .84 + segment * .10, endRadius = startRadius + .13;
       const bend = (noise(slot * 3.1) - .5) * .24, y = (noise(slot * 7.7) - .5) * .32;
       for (let vertex = 0; vertex < VERTICES_PER_SEGMENT; vertex += 1) {
         const v = base + vertex, so = v * 3, co = v * 2;
@@ -48,13 +48,25 @@ export class LightningSegments {
     this.mesh = new THREE.Mesh(this.geometry, this.material); this.mesh.frustumCulled = false; this.mesh.renderOrder = 3; this.mesh.raycast = () => null;
   }
 
-  update(time: number, hovered: number, count: number, frame: number, width: number, height: number) {
+  update(time: number, hovered: number, count: number, _frame: number, width: number, height: number) {
     this.material.uniforms.uResolution.value.set(width, height);
-    for (let orb = frame % 4; orb < 24; orb += 4) for (let segment = 0; segment < 48; segment += 1) {
-      const branchSegment = segment % 8, active = !this.lite || branchSegment < (orb === hovered ? 5 : 1);
-      const value = !active || orb >= count ? 0 : orb === hovered ? .72 + noise(time * 7 + segment) * .28 : branchSegment === 0 ? .13 + noise(time * 2 + orb) * .08 : 0;
-      const base = (orb * 48 + segment) * VERTICES_PER_SEGMENT;
-      for (let vertex = 0; vertex < VERTICES_PER_SEGMENT; vertex += 1) this.intensity[base + vertex] = value;
+    // Each orb bursts on its own desynced cycle: a ~0.55s pulse, then a 1-5s
+    // gap (both derived from the orb index so they stay stable and staggered).
+    const burstLen = .55;
+    for (let orb = 0; orb < 24; orb += 1) {
+      const gap = 1 + noise(orb * 13.7) * 4, phase = noise(orb * 7.3) * 10, period = gap + burstLen;
+      const local = (time + phase) % period, env = local < burstLen ? Math.sin((local / burstLen) * Math.PI) : 0;
+      const hover = orb === hovered, off = orb >= count;
+      for (let segment = 0; segment < 48; segment += 1) {
+        const branchSegment = segment % 8;
+        let value = 0;
+        if (!off) {
+          if (hover) value = (!this.lite || branchSegment < 5) ? .78 + noise(time * 7 + segment) * .22 : 0;
+          else if (!this.lite || branchSegment < 3) value = env * (.55 + noise(time * 9 + orb * 3 + segment) * .45);
+        }
+        const base = (orb * 48 + segment) * VERTICES_PER_SEGMENT;
+        for (let vertex = 0; vertex < VERTICES_PER_SEGMENT; vertex += 1) this.intensity[base + vertex] = value;
+      }
     }
     this.intensityAttribute.needsUpdate = true;
     if (this.cpuCenters) {

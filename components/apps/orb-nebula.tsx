@@ -78,7 +78,7 @@ function NebulaSimulation({ apps, labels, onPerformanceFallback, reducedMotion, 
         (shell.state.array as Float32Array)[index] = reducedMotion ? .58 : index === hovered.current ? 1 : apps[index].liveUrl ? .42 : .22;
       }
       if (shellMesh.current) shellMesh.current.instanceMatrix.needsUpdate = true;
-      shell.state.needsUpdate = true; staticWritten.current = true;
+      shell.state.needsUpdate = true; shell.material.uniforms.uTime.value = simTime.current; staticWritten.current = true;
     }
     const positions = simulation.current!.renderPositions;
     if (hoverLight.current) { const offset = Math.max(0, hovered.current) * 3; hoverLight.current.position.set(positions[offset], positions[offset + 1], positions[offset + 2]); hoverLight.current.intensity = hovered.current < 0 ? 0 : 2.2; }

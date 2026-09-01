@@ -8,6 +8,11 @@ import type { NebulaTheme } from "@/lib/nebula-theme";
 import { AppGrid } from "./app-grid";
 
 const OrbNebula = dynamic(() => import("./orb-nebula"), { ssr: false, loading: () => <div className="nebula-loading">Igniting the nebula…</div> });
+
+// Start fetching the nebula chunk as this module evaluates rather than after hydration
+// resolves the reduced-motion gate below; next/dynamic dedupes the second import.
+// Skipped without WebGL2, since those clients take the committed grid fallback.
+if (typeof window !== "undefined" && supportsWebGL()) void import("./orb-nebula");
 type Tier = "full" | "lite" | "off";
 let reducedQuery: MediaQueryList | null = null;
 let reducedSnapshot: boolean | null = null;

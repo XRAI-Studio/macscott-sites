@@ -60,17 +60,30 @@ npm run test:integration
 
 `owner` must match the publishing account (`scott` for `XRAI-Studio`, `alexander` for `alexandermacscott-del`) or be `both`. A shared app appears on both sites. `liveUrl` must be HTTPS and cannot use either showcase origin. Omit `liveUrl` for an in-development orb. When `liveUrl` exists, `embeddable` defaults to `true`; set it to `false` when the app blocks framing. Screenshot paths are repository-relative and fetched at the same pinned commit SHA as the manifest.
 
-3. Optionally add `.github/workflows/macscott-revalidate.yml` for seconds-fast refresh (store the bearer value as repository secret `MACSCOTT_REVALIDATE_SECRET`):
+3. Optionally wire the repo for seconds-fast refresh by calling this repo's reusable
+workflow, which retries transient failures, fails fast on a bad secret, and collapses
+simultaneous pushes into one refresh:
 
 ```yaml
-name: Refresh MacScott
-on: [push]
+name: Refresh MacScott showcase
+on:
+  push:
+    branches: [main]
+    paths: [macscott.json]
+  workflow_dispatch:
+
 jobs:
   revalidate:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl --fail -X POST -H "Authorization: Bearer ${{ secrets.MACSCOTT_REVALIDATE_SECRET }}" https://scott.macscott.net/api/revalidate
+    uses: XRAI-Studio/macscott-sites/.github/workflows/revalidate-showcase.yml@main
+    with:
+      reason: ${{ github.repository }}
+    secrets:
+      REVALIDATE_SECRET: ${{ secrets.MACSCOTT_REVALIDATE_SECRET }}
 ```
+
+See [docs/per-app-revalidate.md](docs/per-app-revalidate.md) for setting the secret
+(including an org-wide secret for `XRAI-Studio`), triggering after a Pages deploy, and
+verifying the result.
 
 Without the Action, the shared catalog refreshes on its one-hour cache cycle. Invalid manifests exclude only their repository and produce a structured rejection log; transient GitHub failures preserve the last good catalog.
 

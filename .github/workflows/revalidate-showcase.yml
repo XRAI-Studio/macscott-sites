@@ -1,0 +1,64 @@
+# Refreshes the MacScott showcase catalog immediately instead of waiting for the
+# hourly ISR revalidation.
+#
+# Called two ways:
+#   workflow_dispatch — run it by hand from this repo's Actions tab.
+#   workflow_call     — an app repo calls it after it publishes, e.g. after a
+#                       Pages deploy or a change to its macscott.json. See
+#                       docs/per-app-revalidate.md for the caller snippet.
+name: Revalidate showcase catalog
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      reason:
+        description: Free-text note recorded in the run log (e.g. the calling repo).
+        type: string
+        required: false
+        default: manual
+    secrets:
+      REVALIDATE_SECRET:
+        description: Bearer token matching REVALIDATE_SECRET in the Vercel project.
+        required: true
+
+# Two pushes landing together only need one refresh, and the endpoint rebuilds the
+# whole catalog, so cancel a superseded run rather than revalidating twice.
+concurrency:
+  group: revalidate-showcase
+  cancel-in-progress: true
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST /api/revalidate
+        env:
+          SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          REASON: ${{ inputs.reason || 'manual' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SECRET}" ]; then
+            echo "::error::REVALIDATE_SECRET is empty. Pass it from the calling workflow with 'secrets:'."
+            exit 1
+          fi
+          echo "Revalidating showcase catalog (reason: ${REASON})"
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o response.json -w '%{http_code}' \
+              -X POST https://scott.macscott.net/api/revalidate \
+              -H "Authorization: Bearer ${SECRET}") && true
+            if [ "${code}" = "200" ]; then
+              echo "Catalog revalidated: $(cat response.json)"
+              exit 0
+            fi
+            # 401 is a bad secret, not a blip -- retrying cannot fix it.
+            if [ "${code}" = "401" ]; then
+              echo "::error::401 Unauthorized. REVALIDATE_SECRET does not match the deployed value."
+              exit 1
+            fi
+            echo "Attempt ${attempt} got HTTP ${code}; retrying in $((attempt * 5))s"
+            sleep $((attempt * 5))
+          done
+          echo "::error::Revalidate failed after 3 attempts (last HTTP ${code}): $(cat response.json 2>/dev/null)"
+          exit 1

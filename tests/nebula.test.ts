@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { AppsExperience } from "@/components/apps/apps-experience";
 import type { CatalogApp } from "@/lib/catalog-builder";
 import { nebulaTheme } from "@/lib/nebula-theme";
+import { LabelManager, NebulaLabels } from "@/components/apps/label-manager";
 import { LIGHTNING_SEGMENT_CAPACITY } from "@/components/apps/lightning-segments";
 import { MAX_ORBS, SimulationState, slugAnchor } from "@/components/apps/nebula-simulation";
 import { createNebulaRenderer, installRendererContextHandlers } from "@/components/apps/nebula-renderer";
@@ -112,5 +113,19 @@ describe("nebula renderer failures", () => {
     const lost = new Event("webglcontextlost", { cancelable: true }); target.dispatchEvent(lost); target.dispatchEvent(new Event("webglcontextrestored"));
     expect(lost.defaultPrevented).toBe(true); expect(failure).toHaveBeenCalledTimes(1); expect(canvas.setAttribute).toHaveBeenCalledWith("aria-hidden", "true");
     cleanup();
+  });
+});
+
+describe("nebula labels", () => {
+  it("mounts every label hidden so none paints stacked at the stage origin before the first frame", () => {
+    const apps = [app("first", "First"), app("second", "Second")];
+    const html = renderToStaticMarkup(createElement(NebulaLabels, { apps, manager: new LabelManager(apps) }));
+    const styles = [...html.matchAll(/style="([^"]*)"/g)].map((match) => match[1]);
+    expect(styles).toHaveLength(2);
+    for (const style of styles) {
+      expect(style).toContain("visibility:hidden");
+      expect(style).toContain("opacity:0");
+    }
+    expect(html).not.toContain("translate3d");
   });
 });

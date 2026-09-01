@@ -35,5 +35,5 @@ export class LabelManager {
 }
 
 export function NebulaLabels({ apps, manager }: { apps: CatalogApp[]; manager: LabelManager }) {
-  return <div className="nebula-labels" aria-hidden="true">{apps.map((app, index) => <div className="orb-label" key={app.slug} ref={manager.labels[index].ref} style={{ width: manager.labels[index].width }}><span>{app.title}</span><small>{app.liveUrl ? "ENTER" : "IN DEVELOPMENT"}</small></div>)}</div>;
+  return <div className="nebula-labels" aria-hidden="true">{apps.map((app, index) => <div className="orb-label" key={app.slug} ref={manager.labels[index].ref} style={{ width: manager.labels[index].width, visibility: "hidden", opacity: 0 }}><span>{app.title}</span><small>{app.liveUrl ? "ENTER" : "IN DEVELOPMENT"}</small></div>)}</div>;
 }

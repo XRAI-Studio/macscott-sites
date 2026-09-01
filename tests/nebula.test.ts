@@ -8,6 +8,7 @@ import { nebulaTheme } from "@/lib/nebula-theme";
 import { LabelManager, NebulaLabels } from "@/components/apps/label-manager";
 import { LIGHTNING_SEGMENT_CAPACITY } from "@/components/apps/lightning-segments";
 import { MAX_ORBS, SimulationState, slugAnchor } from "@/components/apps/nebula-simulation";
+import { RUNTIME_LABELS, runtimeState } from "@/components/apps/app-detail-overlay";
 import { createNebulaRenderer, installRendererContextHandlers } from "@/components/apps/nebula-renderer";
 
 const app = (slug: string, title: string): CatalogApp => ({
@@ -127,5 +128,19 @@ describe("nebula labels", () => {
       expect(style).toContain("opacity:0");
     }
     expect(html).not.toContain("translate3d");
+  });
+});
+
+describe("app detail runtime state", () => {
+  it("tells an external launch apart from an unfinished app", () => {
+    expect(runtimeState({ liveUrl: "https://example.com", embeddable: true })).toBe("playable");
+    expect(runtimeState({ liveUrl: "https://example.com", embeddable: false })).toBe("external");
+    expect(runtimeState({ liveUrl: null, embeddable: false })).toBe("dormant");
+  });
+
+  it("never labels a live app as in development", () => {
+    expect(RUNTIME_LABELS.external.tile).not.toContain("DEVELOPMENT");
+    expect(RUNTIME_LABELS.dormant.tile).toContain("DEVELOPMENT");
+    expect(RUNTIME_LABELS.external.eyebrow).toBe("EXTERNAL LAUNCH");
   });
 });

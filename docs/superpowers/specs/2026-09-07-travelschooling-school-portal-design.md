@@ -1,7 +1,7 @@
 # Travel Schooling school portal and game platform — design
 
-_Date: 2026-09-07, revision 2 after Scott's first review. Author: Claude (Fable) with Scott.
-Status: draft for Scott's second review._
+_Date: 2026-09-07, revision 3 after Scott's second review. Author: Claude (Fable) with Scott.
+Status: draft for Scott's third review._
 
 _Home: this spec lives in the showcase repo for now because that is where it was written.
 The portal is a new project; when its repo `XRAI-Studio/travelschooling-portal` is created,
@@ -10,7 +10,9 @@ this file moves there and this copy becomes a pointer._
 _Changes in revision 2: portal moves to `class.travelschooling.com`; Vercel Hobby instead
 of Pro; Supabase's built-in email instead of a separate provider, with the over-limit
 behaviour specified; a shared rewards system (XP, streaks, gems, achievements) that every
-game plugs into, modelled on WordWave's._
+game plugs into, modelled on WordWave's. Revision 3: KATAS grows into a course with kata
+pages, an Isshin Ryu history page, a 20-question quiz per kata, view milestones, and a
+practice journal; a `journal_entries` table and kit methods to match._
 
 ## 1. Goal
 
@@ -291,6 +293,15 @@ create table quests (                       -- school-wide dailies
 create table shop_items (
   id text primary key, title text not null, price int not null, effect jsonb not null
 );
+
+create table journal_entries (             -- one note per learner per game per day
+  user_id    uuid references auth.users on delete cascade,
+  game       text references games,
+  entry_date date not null,
+  body       text not null check (char_length(body) <= 4000),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, game, entry_date)
+);
 ```
 
 **Server functions (Postgres, `security definer`):** `award(game, event, detail)` validates
@@ -300,8 +311,9 @@ the event against `games.xp_events`, applies the daily cap, inserts the ledger r
 `reward_totals` or the ledger directly; RLS forbids it. This is how a school with a tiny
 budget gets server-authoritative rewards with no server of its own.
 
-RLS: a learner reads and writes their own `game_progress`, reads their own totals, ledger
-and achievements, and calls the functions. Admin (by role claim) reads all profiles,
+RLS: a learner reads and writes their own `game_progress` and `journal_entries` (an entry
+is writable only on its own date, enforced by a check in the policy), reads their own
+totals, ledger and achievements, and calls the functions. Admin (by role claim) reads all profiles,
 progress and totals and updates approval columns and `settings`.
 
 WordWave's own tables (courses, lessons, word reviews) move into the same database under a
@@ -325,6 +337,8 @@ await kit.save(state, { headline: '12 words forged', percent: 34 })  // debounce
 await kit.award('word_forged', { word: 'aqueduct' })   // → { xp, gems, level, streak, levelUp, newAchievements }
 await kit.unlock('first_story')
 kit.totals               // latest { xp, level, gems, streak } for an in-game HUD
+await kit.journal.save(text)          // today's entry, creates or replaces
+await kit.journal.list({ limit: 30 }) // newest first
 kit.launcherUrl          // link back to the portal
 ```
 
@@ -399,14 +413,57 @@ by hand-wiring keys.
   the service worker; its relative paths work at a domain root. Change the cache name so
   installed users pick up the new origin cleanly.
 
-### 7.5 KATAS (progress definition is **proposed**, confirm at review)
+### 7.5 KATAS (grows from a viewer into a course; details **proposed**, confirm at review)
 
-- Proposed `state`: per kata, furthest step reached and last camera preset; summary: katas
-  started and completed.
-- Rewards: `award('kata_step')` per new furthest step, `award('kata_complete')` the first
-  time a kata is stepped through end to end, an achievement per kata and one for all five.
-- Deploy as a static Vercel project from the existing build output with the middleware
-  file. The GitHub Pages workflow is retired.
+KATAS becomes four things in one static site: the existing 3D viewer, a page per kata, a
+history of Isshin Ryu, a 20-question quiz per kata, and a practice journal.
+
+**Content (Scott authors, lives in the repo as files):**
+
+- `content/katas/<kata>.md`: description page per kata. The five markdown files already at
+  the repo root (Seisan, Seiunchin, Naihanchi, Wansu, Chinto: rank, lineage, themes, kiai
+  points) seed these.
+- `content/history.md`: the history of Isshin Ryu.
+- `content/quiz/<kata>.json`: 20 questions per kata, 100 in all. Each question has
+  `id`, `category` (one of `movement`, `bunkai`, `kiai`, `balance`, `history`), the
+  prompt, choices, the correct choice, and an optional `step` that opens the viewer at
+  that point of the kata so the student can look before answering. Multiple choice only;
+  the format is validated by a test so a typo cannot ship a broken quiz.
+
+**Pages:** viewer (as today), `/kata/<name>` (description with "watch" and "take the
+quiz"), `/history`, `/quiz/<name>`, `/journal`. Plain HTML with a small build step
+(the repo already builds through a workflow), so the markdown renders at build time.
+
+**Views.** A view is counted once per session when a kata is opened in the viewer and
+played past its first step. Repeated scrubbing in the same session is one view.
+
+**`state`** (the game's private save): per kata, furthest step reached, last camera
+preset, view count, and per question id whether it has been answered correctly at least
+once and the last answer given. **`summary`** (what the dashboard shows): katas started
+and completed, total views of each kata, and percentage of the 100 questions answered
+correctly.
+
+**Journal.** One note per class day: the student writes what they practised and how it
+went. Entries are keyed by learner and date, one per day, editable that day only, listed
+newest first with the kata viewed that day alongside. Stored in the school's
+`journal_entries` table (§5), not in `state`, because it is free text that grows for years
+and the dashboard shows it as a timeline. Scott can read any student's journal from the
+admin dashboard, which is the teacher's view of the class.
+
+**Rewards:**
+
+- `award('kata_step')` per new furthest step; `award('kata_complete')` the first time a
+  kata is stepped through end to end.
+- `award('kata_view')` per counted view, small XP with a daily cap so replays do not farm.
+- `award('quiz_correct')` the first time each question is answered correctly (never again
+  for that question), and `award('quiz_perfect')` when a kata's 20 are all correct.
+- `award('journal_entry')` once per day when a note is saved.
+- Achievements: one per kata completed and one for all five; **view milestones per kata at
+  1, 5, 10, 20, 50 and 100 views** (30 badges); quiz perfect per kata and one for all 100
+  questions; journal streaks at 5, 20 and 50 entries.
+
+**Deploy:** a static Vercel project from the build output with the middleware file. The
+GitHub Pages workflow is retired.
 
 ## 8. Showcase catalog
 
@@ -453,7 +510,11 @@ Each step leaves everything before it working.
   freeze), `unlock` idempotence, and `buy` with insufficient gems.
 - Middleware: table-driven tests for missing, expired, unapproved and valid tokens on each
   host type (Next proxy, static routing middleware, FastAPI dependency).
-- Kit: tests for offline cache replay, queued awards replay, and last-write-wins.
+- Kit: tests for offline cache replay, queued awards replay, last-write-wins, and that a
+  journal entry for a past date is rejected.
+- KATAS: a content test that every quiz file has exactly 20 questions, each with one
+  correct choice and a known category, and that every `step` reference exists in the kata;
+  a view-counting test (one view per session, not per scrub).
 - WordWave: the existing suite plus a migration test that links an old `User` by email and
   reproduces its balances in the ledger.
 - Knowledge Horizon: a two-learner test proving isolation for each persistence path found
@@ -473,7 +534,12 @@ Each step leaves everything before it working.
   expected. It is sized as its own task for that reason.
 - **WordWave email matching** trusts that a re-registering student uses the same email
   they used before. Anyone who does not starts fresh; the admin page can merge by hand.
-- **KATAS progress definition** is a proposal awaiting Scott's confirmation.
+- **KATAS scope** is now a course, not a viewer: five description pages, a history page,
+  100 quiz questions and a journal. The code is small; the **content is the work**, and
+  Scott writes it. The plan will make the app ship with the viewer, pages and journal first
+  and let quizzes appear kata by kata as questions are written.
+- **The view definition** (one per session past the first step) is a proposal; it decides
+  how fast the 100-view badge is reachable.
 - **Vercel Hobby** is free while the school is non-commercial. Charging for classes or
   passing 50 students is Scott's trigger to move to Pro.
 - **The word-weighting sentence game** Scott remembers building was not found on this

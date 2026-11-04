@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { getGPUTier } from "detect-gpu";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { CatalogApp } from "@/lib/catalog-builder";
+import { markCatalogVisited } from "@/lib/catalog-visit";
 import type { NebulaTheme } from "@/lib/nebula-theme";
 import { AppGrid } from "./app-grid";
 
@@ -44,6 +45,7 @@ export function AppsExperience({ apps, requestedTier, theme }: { apps: CatalogAp
   const visibleApps = apps.slice(0, 24);
 
   useEffect(() => {
+    markCatalogVisited();
     if (!supportsWebGL()) { setContextLost(true); setGridOnly(true); }
     if (!requestedTier) getGPUTier().then((gpu) => setTier(gpu.tier <= 1 || gpu.isMobile ? "lite" : "full")).catch(() => setTier("lite"));
     const lastApp = sessionStorage.getItem("macscott:last-app");

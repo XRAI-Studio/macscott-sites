@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CatalogApp } from "@/lib/catalog-builder";
+import { leaveAppOverlay } from "@/lib/catalog-visit";
 
 type RuntimeState = "playable" | "external" | "dormant";
 
@@ -25,7 +26,7 @@ export function AppDetailOverlay({ app }: { app: CatalogApp }) {
   const router = useRouter();
   const overlay = useRef<HTMLDivElement>(null);
   const [minimized, setMinimized] = useState(false);
-  const close = () => router.back();
+  const close = () => leaveAppOverlay(router);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const root = overlay.current;
